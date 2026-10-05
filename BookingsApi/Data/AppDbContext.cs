@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 namespace BookingsApi.Data;
 
 /// <summary>
-/// Maps to the existing schema in docs/schema.sql. The schema is NOT created by EF
-/// (no migrations, no EnsureCreated); index definitions here are documentation only.
-/// The slot no-overlap exclusion constraint (EX_Slots_NoOverlap, SqlState 23P01) lives only in SQL.
+/// Source of truth for the schema (EF migrations in Data/Migrations; docs/schema.sql is reference only).
+/// The slot no-overlap exclusion constraint (EX_Slots_NoOverlap, SqlState 23P01) cannot be modelled
+/// by EF and is added with raw SQL in the InitialCreate migration.
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
@@ -17,9 +17,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("btree_gist");
+
         modelBuilder.Entity<User>(e =>
         {
-            e.ToTable("Users");
+            e.ToTable("Users", t => t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN ('Customer','Provider')"));
             e.HasKey(x => x.Id).HasName("PK_Users");
             e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             e.Property(x => x.Email).HasMaxLength(256).IsRequired();
@@ -45,7 +47,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         modelBuilder.Entity<Slot>(e =>
         {
-            e.ToTable("Slots");
+            e.ToTable("Slots", t =>
+            {
+                t.HasCheckConstraint("CK_Slots_EndAfterStart", "\"EndUtc\" > \"StartUtc\"");
+                t.HasCheckConstraint("CK_Slots_Price", "\"PriceCents\" >= 0");
+            });
             e.HasKey(x => x.Id).HasName("PK_Slots");
             e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             e.Property(x => x.StartUtc).HasColumnType("timestamptz");
@@ -57,7 +63,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
         modelBuilder.Entity<Booking>(e =>
         {
-            e.ToTable("Bookings");
+            e.ToTable("Bookings", t =>
+            {
+                t.HasCheckConstraint("CK_Bookings_Status", "\"Status\" IN ('Pending','Confirmed','PaymentFailed','Cancelled')");
+                t.HasCheckConstraint("CK_Bookings_Amount", "\"AmountCents\" >= 0");
+            });
             e.HasKey(x => x.Id).HasName("PK_Bookings");
             e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();

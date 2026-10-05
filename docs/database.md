@@ -1,6 +1,6 @@
 # Database schema (PostgreSQL 16)
 
-Source: PRD section 4 and 6. Executable DDL is in [`schema.sql`](schema.sql) (identical to the block in section 2).
+Source: PRD section 4 and 6. The schema is created by EF Core migrations (`BookingsApi/Data/Migrations`, applied automatically on startup in Development); [`schema.sql`](schema.sql) is the equivalent reference DDL (identical to the block in section 2) and is no longer run by docker. `InitialCreate` also adds the `EX_Slots_NoOverlap` exclusion constraint via raw SQL; `SeedDemoData` loads fake demo users (`provider1@demo.test`, `provider2@demo.test`, `customer1..3@demo.test`, password `Passw0rd!`), resources, slots for the next 14 days and a few bookings.
 
 ## 1. ERD
 

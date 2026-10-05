@@ -1,3 +1,5 @@
+-- REFERENCE ONLY. This file documents the schema. EF Core migrations (BookingsApi/Data/Migrations)
+-- are the source of truth and create the database on startup; this file is no longer executed.
 -- Booking system schema, PostgreSQL 16. All times timestamptz (UTC), money in integer cents.
 -- Identifiers are quoted PascalCase to match EF Core / Npgsql conventions.
 
