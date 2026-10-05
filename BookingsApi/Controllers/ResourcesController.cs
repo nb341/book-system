@@ -20,7 +20,7 @@ public sealed class ResourcesController(ResourceService resources) : ControllerB
 
     [Authorize(Roles = "Provider")]
     [HttpPost("api/provider/resources")]
-    public async Task<ActionResult<ResourceDto>> Create(CreateResourceRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<ResourceDto>> Create(ResourceRequest request, CancellationToken ct) =>
         StatusCode(StatusCodes.Status201Created,
             await resources.CreateResourceAsync(User.GetUserId(), request, ct));
 
@@ -31,7 +31,7 @@ public sealed class ResourcesController(ResourceService resources) : ControllerB
 
     [Authorize(Roles = "Provider")]
     [HttpPut("api/provider/resources/{id:guid}")]
-    public async Task<ActionResult<ResourceDto>> Update(Guid id, UpdateResourceRequest request, CancellationToken ct) =>
+    public async Task<ActionResult<ResourceDto>> Update(Guid id, ResourceRequest request, CancellationToken ct) =>
         await resources.UpdateResourceAsync(User.GetUserId(), id, request, ct);
 
     [Authorize(Roles = "Provider")]

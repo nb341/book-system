@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ApiError, fieldMessages } from '../api/client.ts'
+import { ApiError, asApiError, fieldMessages } from '../api/client.ts'
 import type { Role } from '../api/types.ts'
 import { homePathForRole } from '../auth/AuthContext.ts'
 import { useAuth } from '../auth/useAuth.ts'
@@ -36,7 +36,7 @@ export function Register() {
       const created = await register({ email: email.trim(), password, name: name.trim(), role })
       navigate(homePathForRole(created.role), { replace: true })
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.'))
+      setError(asApiError(caught))
       setIsPending(false)
     }
   }

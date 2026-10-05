@@ -11,13 +11,9 @@ public sealed class ResourceService(AppDbContext db)
 {
     private static readonly BookingStatus[] Active = [BookingStatus.Pending, BookingStatus.Confirmed];
 
-    public async Task<ResourceDto> CreateResourceAsync(Guid providerId, CreateResourceRequest request, CancellationToken ct)
+    public async Task<ResourceDto> CreateResourceAsync(Guid providerId, ResourceRequest request, CancellationToken ct)
     {
-        var name = request.Name!.Trim();
-        if (name.Length == 0)
-            throw AppException.Validation("name", "Name is required.");
-        var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-
+        var (name, description) = Normalize(request);
         var resource = new Resource
         {
             Id = Guid.NewGuid(),
@@ -32,17 +28,14 @@ public sealed class ResourceService(AppDbContext db)
     }
 
     public async Task<ResourceDto> UpdateResourceAsync(
-        Guid providerId, Guid resourceId, UpdateResourceRequest request, CancellationToken ct)
+        Guid providerId, Guid resourceId, ResourceRequest request, CancellationToken ct)
     {
-        var name = request.Name!.Trim();
-        if (name.Length == 0)
-            throw AppException.Validation("name", "Name is required.");
-
+        var (name, description) = Normalize(request);
         var resource = await db.Resources
             .FirstOrDefaultAsync(r => r.Id == resourceId && r.ProviderId == providerId, ct)
             ?? throw new AppException(StatusCodes.Status404NotFound, "Resource not found");
         resource.Name = name;
-        resource.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        resource.Description = description;
         await db.SaveChangesAsync(ct);
         return new ResourceDto(resource.Id, resource.Name, resource.Description);
     }
@@ -163,6 +156,14 @@ public sealed class ResourceService(AppDbContext db)
         return await query.OrderBy(s => s.StartUtc)
             .Select(s => new SlotDto(s.Id, s.StartUtc, s.EndUtc, s.PriceCents))
             .ToListAsync(ct);
+    }
+
+    private static (string Name, string? Description) Normalize(ResourceRequest request)
+    {
+        var name = request.Name!.Trim();
+        if (name.Length == 0)
+            throw AppException.Validation("name", "Name is required.");
+        return (name, string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim());
     }
 
     private async Task EnsureOwnedAsync(Guid providerId, Guid resourceId, CancellationToken ct)

@@ -1,15 +1,11 @@
 import { useCallback, useState, type SyntheticEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, fieldMessages } from '../api/client.ts'
+import { ApiError, asApiError, fieldMessages } from '../api/client.ts'
 import { createSlot, deleteSlot, listMyResources, listMySlots } from '../api/provider.ts'
 import { ErrorBanner } from '../components/ErrorBanner.tsx'
 import { FieldErrors } from '../components/FieldErrors.tsx'
 import { formatDateRange, formatMoney } from '../format.ts'
 import { useLoad } from '../hooks/useLoad.ts'
-
-function toApiError(caught: unknown): ApiError {
-  return caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
-}
 
 export function ProviderResourceSlots() {
   const { id = '' } = useParams()
@@ -73,7 +69,7 @@ function SlotsView({ resourceId }: { resourceId: string }) {
       setPrice('')
       slots.reload()
     } catch (caught) {
-      setFormError(toApiError(caught))
+      setFormError(asApiError(caught))
     } finally {
       setIsPending(false)
     }
@@ -88,7 +84,7 @@ function SlotsView({ resourceId }: { resourceId: string }) {
       await deleteSlot(slotId)
       slots.reload()
     } catch (caught) {
-      const error = toApiError(caught)
+      const error = asApiError(caught)
       setDeleteError(error.status === 409 ? 'This slot has bookings and cannot be deleted.' : error.message)
     } finally {
       setDeletingId(null)

@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { createBooking } from '../api/bookings.ts'
-import { ApiError } from '../api/client.ts'
+import { asApiError } from '../api/client.ts'
 import type { Booking, Slot } from '../api/types.ts'
 import { formatDateRange, formatMoney } from '../format.ts'
 import { ErrorBanner } from './ErrorBanner.tsx'
@@ -38,7 +38,7 @@ export function Checkout({ slot, resourceName, onClose, onSlotsChanged }: Checko
       setBooking(created)
       onSlotsChanged()
     } catch (caught) {
-      const error = caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
+      const error = asApiError(caught)
       if (error.status === 409) {
         setOutcome({ kind: 'taken' })
         onSlotsChanged()

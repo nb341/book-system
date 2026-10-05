@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, fieldMessages } from '../api/client.ts'
+import { ApiError, asApiError, fieldMessages } from '../api/client.ts'
 import { createResource, listMyResources } from '../api/provider.ts'
 import { ErrorBanner } from '../components/ErrorBanner.tsx'
 import { FieldErrors } from '../components/FieldErrors.tsx'
@@ -24,7 +24,7 @@ export function ProviderResources() {
       setDescription('')
       reload()
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.'))
+      setError(asApiError(caught))
     } finally {
       setIsPending(false)
     }

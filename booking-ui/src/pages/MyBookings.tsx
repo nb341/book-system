@@ -1,19 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cancelBooking, listMyBookings } from '../api/bookings.ts'
-import { ApiError } from '../api/client.ts'
-import type { Booking, BookingStatus } from '../api/types.ts'
+import { asApiError } from '../api/client.ts'
+import type { Booking } from '../api/types.ts'
 import { ErrorBanner } from '../components/ErrorBanner.tsx'
 import { ReschedulePanel } from '../components/ReschedulePanel.tsx'
 import { useLoad } from '../hooks/useLoad.ts'
-import { formatDateRange, formatMoney } from '../format.ts'
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  Confirmed: 'Confirmed',
-  Pending: 'Pending',
-  PaymentFailed: 'Payment failed',
-  Cancelled: 'Cancelled',
-}
+import { BOOKING_STATUS_LABELS, formatDateRange, formatMoney } from '../format.ts'
 
 export function MyBookings() {
   const { data: bookings, error, isLoading, reload } = useLoad(listMyBookings)
@@ -73,7 +66,7 @@ function BookingGroup({ title, bookings, now, openId, setOpenId, onDone }: Group
       await cancelBooking(booking.id)
       onDone('Booking cancelled.')
     } catch (caught) {
-      const err = caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
+      const err = asApiError(caught)
       setCancelError({ id: booking.id, message: err.message })
     } finally {
       setCancelling(null)
@@ -92,7 +85,7 @@ function BookingGroup({ title, bookings, now, openId, setOpenId, onDone }: Group
               <h3>{booking.resourceName}</h3>
               <span>{formatDateRange(booking.startUtc, booking.endUtc)}</span>
               <strong>{formatMoney(booking.amountCents)}</strong>
-              <span className={`badge badge-${booking.status.toLowerCase()}`}>{STATUS_LABELS[booking.status]}</span>
+              <span className={`badge badge-${booking.status.toLowerCase()}`}>{BOOKING_STATUS_LABELS[booking.status]}</span>
               <div className="booking-actions">
                 {canChange && (
                   <>

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { rescheduleBooking } from '../api/bookings.ts'
-import { ApiError } from '../api/client.ts'
+import { asApiError } from '../api/client.ts'
 import { listAvailableSlots } from '../api/resources.ts'
 import type { Booking } from '../api/types.ts'
 import { useLoad } from '../hooks/useLoad.ts'
@@ -35,7 +35,7 @@ export function ReschedulePanel({ booking, onDone, onClose }: Props) {
     days.set(key, [...(days.get(key) ?? []), slot])
   }
 
-  async function confirm() {
+  async function submitReschedule() {
     if (!selected || isPending) return
     setMessage(null)
     setIsPending(true)
@@ -43,7 +43,7 @@ export function ReschedulePanel({ booking, onDone, onClose }: Props) {
       await rescheduleBooking(booking.id, selected.id)
       onDone('Booking rescheduled.')
     } catch (caught) {
-      const err = caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
+      const err = asApiError(caught)
       setConfirming(false)
       if (err.status === 409) {
         setMessage('That slot was just taken — pick another.')
@@ -57,7 +57,7 @@ export function ReschedulePanel({ booking, onDone, onClose }: Props) {
   }
 
   return (
-    <div className="reschedule-panel" aria-label="Reschedule booking">
+    <div className="reschedule-panel" role="region" aria-label="Reschedule booking">
       <strong>Pick a new time for {booking.resourceName}</strong>
       <p className="status">Price differences aren't charged or refunded.</p>
       <ErrorBanner message={message} />
@@ -96,7 +96,7 @@ export function ReschedulePanel({ booking, onDone, onClose }: Props) {
         {selected && confirming && (
           <>
             <span>Move to {formatDay(selected.startUtc)}, {formatTimeRange(selected.startUtc, selected.endUtc)}?</span>
-            <button type="button" onClick={confirm} disabled={isPending}>
+            <button type="button" onClick={submitReschedule} disabled={isPending}>
               {isPending ? 'Rescheduling...' : 'Confirm'}
             </button>
           </>

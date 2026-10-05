@@ -31,6 +31,11 @@ export class ApiError extends Error {
   }
 }
 
+/** Normalizes anything caught from an API call into an ApiError for display. */
+export function asApiError(caught: unknown): ApiError {
+  return caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
+}
+
 let unauthorizedHandler: (() => void) | null = null
 
 /** Called when an authenticated request gets 401 (expired/invalid token). */

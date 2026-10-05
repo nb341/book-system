@@ -113,9 +113,15 @@ public sealed class ApiFixture : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var booking = new Booking
         {
-            Id = Guid.NewGuid(), SlotId = slotId, CustomerId = customer.Id, Status = BookingStatus.Confirmed,
-            AmountCents = 1000, PaymentRef = "mock_x", IdempotencyKey = Guid.NewGuid().ToString("N"),
-            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+            Id = Guid.NewGuid(),
+            SlotId = slotId,
+            CustomerId = customer.Id,
+            Status = BookingStatus.Confirmed,
+            AmountCents = 1000,
+            PaymentRef = "mock_x",
+            IdempotencyKey = Guid.NewGuid().ToString("N"),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
@@ -144,8 +150,11 @@ public sealed class ApiFixture : IAsyncLifetime
         var resource = new Resource { Id = Guid.NewGuid(), ProviderId = provider.Id, Name = "Past court", CreatedAt = DateTime.UtcNow };
         var slot = new Slot
         {
-            Id = Guid.NewGuid(), ResourceId = resource.Id,
-            StartUtc = DateTime.UtcNow.AddHours(-3), EndUtc = DateTime.UtcNow.AddHours(-2), PriceCents = 1000
+            Id = Guid.NewGuid(),
+            ResourceId = resource.Id,
+            StartUtc = DateTime.UtcNow.AddHours(-3),
+            EndUtc = DateTime.UtcNow.AddHours(-2),
+            PriceCents = 1000
         };
         db.Resources.Add(resource);
         db.Slots.Add(slot);

@@ -1,16 +1,8 @@
 import { useState } from 'react'
 import { listProviderBookings } from '../api/provider.ts'
-import type { BookingStatus } from '../api/types.ts'
 import { ErrorBanner } from '../components/ErrorBanner.tsx'
 import { useLoad } from '../hooks/useLoad.ts'
-import { formatDateRange, formatMoney } from '../format.ts'
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  Confirmed: 'Confirmed',
-  Pending: 'Pending',
-  PaymentFailed: 'Payment failed',
-  Cancelled: 'Cancelled',
-}
+import { BOOKING_STATUS_LABELS, formatDateRange, formatMoney } from '../format.ts'
 
 type Filter = 'upcoming' | 'past' | 'all'
 
@@ -49,7 +41,7 @@ export function ProviderBookings() {
                 <td>{b.customerName ?? '-'}</td>
                 <td>{formatDateRange(b.startUtc, b.endUtc)}</td>
                 <td>{formatMoney(b.amountCents)}</td>
-                <td><span className={`badge badge-${b.status.toLowerCase()}`}>{STATUS_LABELS[b.status]}</span></td>
+                <td><span className={`badge badge-${b.status.toLowerCase()}`}>{BOOKING_STATUS_LABELS[b.status]}</span></td>
               </tr>
             ))}
           </tbody>

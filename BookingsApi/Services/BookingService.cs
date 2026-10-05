@@ -49,9 +49,7 @@ public sealed class BookingService(AppDbContext db, IPaymentGateway payments, IL
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
         {
             db.ChangeTracker.Clear();
-            if (pg.ConstraintName == SlotIndex)
-                throw new AppException(StatusCodes.Status409Conflict, "Slot already booked",
-                    "The selected slot is no longer available.");
+            if (pg.ConstraintName == SlotIndex) throw SlotTaken();
             // Idempotency index: a concurrent duplicate request; return the original outcome.
             var original = await FindByKeyAsync(customerId, idempotencyKey, ct) ?? throw new InvalidOperationException("Duplicate key reported but booking not found.", ex);
             return await ReplayAsync(original, ct);
@@ -127,17 +125,59 @@ public sealed class BookingService(AppDbContext db, IPaymentGateway payments, IL
     public async Task<BookingDto> RescheduleAsync(
         Guid customerId, Guid bookingId, RescheduleBookingRequest request, CancellationToken ct)
     {
-        var newSlotId = request.NewSlotId!.Value;
         var now = DateTime.UtcNow;
+        var old = await ValidateRescheduleAsync(customerId, bookingId, request.NewSlotId!.Value, now, ct);
 
+        var newBooking = new Booking
+        {
+            Id = Guid.NewGuid(),
+            SlotId = request.NewSlotId.Value,
+            CustomerId = customerId,
+            Status = BookingStatus.Confirmed,
+            AmountCents = old.AmountCents, // price differences are ignored
+            PaymentRef = old.PaymentRef,
+            IdempotencyKey = $"reschedule:{bookingId:N}",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        // Disposing an uncommitted transaction rolls it back, so any failure leaves the original intact.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var rows = await db.Bookings.Where(b => b.Id == bookingId && b.Status == BookingStatus.Confirmed)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.Status, BookingStatus.Cancelled)
+                    .SetProperty(b => b.UpdatedAt, now), ct);
+            if (rows == 0) throw NotReschedulable();
+
+            db.Bookings.Add(newBooking);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: SlotIndex })
+        {
+            throw SlotTaken();
+        }
+        finally
+        {
+            db.ChangeTracker.Clear();
+        }
+        return await LoadDtoAsync(newBooking.Id, ct);
+    }
+
+    private sealed record RescheduleSource(int AmountCents, string? PaymentRef);
+
+    private async Task<RescheduleSource> ValidateRescheduleAsync(
+        Guid customerId, Guid bookingId, Guid newSlotId, DateTime now, CancellationToken ct)
+    {
         var old = await db.Bookings.AsNoTracking()
             .Where(b => b.Id == bookingId && b.CustomerId == customerId)
             .Select(b => new { b.SlotId, b.Status, b.AmountCents, b.PaymentRef, b.Slot!.StartUtc, b.Slot.ResourceId })
             .FirstOrDefaultAsync(ct)
             ?? throw new AppException(StatusCodes.Status404NotFound, "Not found", "Booking not found.");
         if (old.Status != BookingStatus.Confirmed || old.StartUtc <= now)
-            throw new AppException(StatusCodes.Status409Conflict, "Conflict",
-                "Only confirmed upcoming bookings can be rescheduled.");
+            throw NotReschedulable();
 
         var newSlot = await db.Slots.AsNoTracking().FirstOrDefaultAsync(s => s.Id == newSlotId, ct)
             ?? throw new AppException(StatusCodes.Status404NotFound, "Not found", "Slot not found.");
@@ -148,49 +188,7 @@ public sealed class BookingService(AppDbContext db, IPaymentGateway payments, IL
         if (newSlot.StartUtc <= now)
             throw new AppException(StatusCodes.Status409Conflict, "Slot unavailable", "The slot has already started.");
 
-        var newBooking = new Booking
-        {
-            Id = Guid.NewGuid(),
-            SlotId = newSlotId,
-            CustomerId = customerId,
-            Status = BookingStatus.Confirmed,
-            AmountCents = old.AmountCents, // price differences are ignored
-            PaymentRef = old.PaymentRef,
-            IdempotencyKey = $"reschedule:{bookingId:N}",
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        try
-        {
-            var rows = await db.Bookings.Where(b => b.Id == bookingId && b.Status == BookingStatus.Confirmed)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(b => b.Status, BookingStatus.Cancelled)
-                    .SetProperty(b => b.UpdatedAt, now), ct);
-            if (rows == 0)
-                throw new AppException(StatusCodes.Status409Conflict, "Conflict",
-                    "Only confirmed upcoming bookings can be rescheduled.");
-
-            db.Bookings.Add(newBooking);
-            await db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
-        {
-            db.ChangeTracker.Clear();
-            await tx.RollbackAsync(CancellationToken.None);
-            throw new AppException(StatusCodes.Status409Conflict, "Slot already booked",
-                "The selected slot is no longer available.");
-        }
-        catch
-        {
-            db.ChangeTracker.Clear();
-            await tx.RollbackAsync(CancellationToken.None);
-            throw;
-        }
-        db.ChangeTracker.Clear();
-        return await LoadDtoAsync(newBooking.Id, ct);
+        return new RescheduleSource(old.AmountCents, old.PaymentRef);
     }
 
     public Task<List<ProviderBookingDto>> ListForProviderAsync(Guid providerId, CancellationToken ct) =>
@@ -203,6 +201,12 @@ public sealed class BookingService(AppDbContext db, IPaymentGateway payments, IL
 
     private static AppException NotCancellable() =>
         new(StatusCodes.Status409Conflict, "Conflict", "Only confirmed upcoming bookings can be cancelled.");
+
+    private static AppException NotReschedulable() =>
+        new(StatusCodes.Status409Conflict, "Conflict", "Only confirmed upcoming bookings can be rescheduled.");
+
+    private static AppException SlotTaken() =>
+        new(StatusCodes.Status409Conflict, "Slot already booked", "The selected slot is no longer available.");
 
     private Task<Booking?> FindByKeyAsync(Guid customerId, string key, CancellationToken ct) =>
         db.Bookings.AsNoTracking()

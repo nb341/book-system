@@ -2,14 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BookingsApi.Dtos;
 
-public sealed record CreateResourceRequest
-{
-    [Required, MaxLength(200)] public string? Name { get; init; }
-
-    [MaxLength(2000)] public string? Description { get; init; }
-}
-
-public sealed record UpdateResourceRequest
+/// <summary>Body for both creating and updating (full replace) a resource.</summary>
+public sealed record ResourceRequest
 {
     [Required, MaxLength(200)] public string? Name { get; init; }
 

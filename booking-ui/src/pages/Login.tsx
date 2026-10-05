@@ -1,6 +1,6 @@
 import { useState, type SyntheticEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ApiError, fieldMessages } from '../api/client.ts'
+import { ApiError, asApiError, fieldMessages } from '../api/client.ts'
 import { homePathForRole } from '../auth/AuthContext.ts'
 import { useAuth } from '../auth/useAuth.ts'
 import { ErrorBanner } from '../components/ErrorBanner.tsx'
@@ -25,7 +25,7 @@ export function Login() {
       const signedIn = await login({ email: email.trim(), password })
       navigate(homePathForRole(signedIn.role), { replace: true })
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.'))
+      setError(asApiError(caught))
       setIsPending(false)
     }
   }

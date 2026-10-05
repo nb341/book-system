@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError } from '../api/client.ts'
+import { ApiError, asApiError } from '../api/client.ts'
 
 export interface LoadState<T> {
   data: T | null
@@ -28,7 +28,7 @@ export function useLoad<T>(load: (signal: AbortSignal) => Promise<T>): LoadState
       },
       (caught: unknown) => {
         if (controller.signal.aborted) return
-        const error = caught instanceof ApiError ? caught : new ApiError(0, 'Unexpected error', 'Something went wrong.')
+        const error = asApiError(caught)
         setResult((prev) => ({ data: prev.data, error, done: true }))
       },
     )

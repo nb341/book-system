@@ -1,3 +1,5 @@
+import type { BookingStatus } from './api/types.ts'
+
 export function formatMoney(cents: number): string {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100)
 }
@@ -32,4 +34,11 @@ export function localDayKey(utcIso: string): string {
 
 export function formatTimeRange(startUtc: string, endUtc: string): string {
   return `${timeFormat.format(new Date(startUtc))} - ${timeFormat.format(new Date(endUtc))}`
+}
+
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
+  Confirmed: 'Confirmed',
+  Pending: 'Pending',
+  PaymentFailed: 'Payment failed',
+  Cancelled: 'Cancelled',
 }
