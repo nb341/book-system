@@ -1,6 +1,7 @@
 using System.Text;
 using BookingsApi.Data;
 using BookingsApi.Infrastructure;
+using BookingsApi.Payments;
 using BookingsApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -21,6 +22,8 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ResourceService>();
+builder.Services.AddScoped<BookingService>();
+builder.Services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
 builder.Services.AddSingleton<TokenService>();
 
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>

@@ -5,10 +5,13 @@ import { RequireRole } from './auth/RequireRole.tsx'
 import { useAuth } from './auth/useAuth.ts'
 import { Layout } from './components/Layout.tsx'
 import { Login } from './pages/Login.tsx'
+import { MyBookings } from './pages/MyBookings.tsx'
 import { Placeholder } from './pages/Placeholder.tsx'
 import { ProviderResources } from './pages/ProviderResources.tsx'
 import { ProviderResourceSlots } from './pages/ProviderResourceSlots.tsx'
 import { Register } from './pages/Register.tsx'
+import { ResourceSlots } from './pages/ResourceSlots.tsx'
+import { Resources } from './pages/Resources.tsx'
 
 function HomeRedirect() {
   const { user, isLoading } = useAuth()
@@ -25,8 +28,9 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route element={<Layout />}>
             <Route element={<RequireRole role="Customer" />}>
-              <Route path="/resources" element={<Placeholder title="Resources" />} />
-              <Route path="/bookings" element={<Placeholder title="My Bookings" />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/resources/:id" element={<ResourceSlots />} />
+              <Route path="/bookings" element={<MyBookings />} />
             </Route>
             <Route element={<RequireRole role="Provider" />}>
               <Route path="/provider/resources" element={<ProviderResources />} />

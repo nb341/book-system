@@ -88,3 +88,18 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .card-list li h2 { flex-basis: 100%; margin: 0; font-size: 1.1rem; }
 .card-list li button { margin-left: auto; }
 textarea { font: inherit; min-height: 4rem; }
+
+.card-list li h3 { flex-basis: 100%; margin: 0; font-size: 1.1rem; }
+.card-list li .grow { flex-basis: 100%; margin: 0; }
+.card-list li p.status { margin: 0; font-size: 0.9rem; }
+.card-list li .push { margin-left: auto; }
+.day-heading { margin: 1rem 0 0.5rem; font-size: 1rem; color: var(--muted); }
+.checkout { padding: 1rem; margin: 1rem 0; background: var(--surface); border: 1px solid var(--primary); border-radius: 6px; }
+.checkout h2 { margin-top: 0; font-size: 1.1rem; }
+.badge { padding: 0.1rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; }
+.badge-confirmed { color: #067647; background: #ecfdf3; }
+.badge-pending { color: #b54708; background: #fffaeb; }
+.badge-paymentfailed { color: var(--danger); background: var(--danger-bg); }
+.badge-cancelled { color: var(--muted); background: #eef0f3; }
+.booking-actions { margin-left: auto; }
+.booking-actions:empty { display: none; }

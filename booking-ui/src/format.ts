@@ -16,3 +16,20 @@ export function formatDateRange(startUtc: string, endUtc: string): string {
   const sameDay = start.toDateString() === end.toDateString()
   return `${dateFormat.format(start)} - ${sameDay ? timeFormat.format(end) : dateFormat.format(end)}`
 }
+
+const dayFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'full' })
+
+/** Local-day heading, e.g. "Monday, October 5, 2026". */
+export function formatDay(utcIso: string): string {
+  return dayFormat.format(new Date(utcIso))
+}
+
+/** Stable key for the viewer's local calendar day. */
+export function localDayKey(utcIso: string): string {
+  const d = new Date(utcIso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export function formatTimeRange(startUtc: string, endUtc: string): string {
+  return `${timeFormat.format(new Date(startUtc))} - ${timeFormat.format(new Date(endUtc))}`
+}
