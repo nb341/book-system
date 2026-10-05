@@ -1,5 +1,7 @@
 # API Contract
 
+> Ids are GUIDs, serialized as JSON strings (e.g. `"27a671d9-ecc7-45ff-871b-c0b1fb603260"`). Numeric ids in the examples below are illustrative only; in TypeScript use `string`.
+
 Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants are ISO-8601 UTC strings (`2026-11-01T10:00:00Z`). Money is integer cents.
 
 ## Conventions
@@ -27,11 +29,15 @@ Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants 
 |---|---|---|---|
 | POST `/api/auth/register` | public | 201 | 400, 409 (email exists) |
 | POST `/api/auth/login` | public | 200 | 400, 401 |
+| GET `/api/auth/me` | any authenticated | 200 `{id,email,name,role}` (read from the token; use to validate a stored token) | 401 |
 | GET `/api/resources` | any authenticated | 200 | 401 |
 | GET `/api/resources/{id}/slots?from&to` | any authenticated | 200 | 400, 401, 404 |
 | POST `/api/provider/resources` | Provider | 201 | 400, 401, 403 |
 | GET `/api/provider/resources` | Provider | 200 | 401, 403 |
+| PUT `/api/provider/resources/{id}` | Provider (owner) | 200 | 400, 401, 403, 404 |
+| DELETE `/api/provider/resources/{id}` | Provider (owner) | 204 | 401, 403, 404, 409 (has bookings) |
 | POST `/api/provider/resources/{id}/slots` | Provider (owner) | 201 | 400, 401, 403, 404, 409 (overlap) |
+| GET `/api/provider/resources/{id}/slots` | Provider (owner) | 200 | 401, 403, 404 |
 | DELETE `/api/provider/slots/{id}` | Provider (owner) | 204 | 401, 403, 404, 409 (has bookings) |
 | GET `/api/provider/bookings` | Provider | 200 | 401, 403 |
 | POST `/api/bookings` | Customer | 201 | 400, 401, 402, 403, 404, 409 |
@@ -74,6 +80,18 @@ Request `{ "name": "Court 1", "description": "Indoor tennis court" }` (name requ
 ### GET /api/provider/resources
 200: array of the same resource objects (own only).
 
+### PUT /api/provider/resources/{id}
+Owner only (404 otherwise). Same request body and rules as create. 200: the updated resource object.
+
+### DELETE /api/provider/resources/{id}
+Owner only (404 otherwise). 204 no body; the resource's slots are deleted with it. 409 if any of its slots has a booking (active or historical).
+
+### GET /api/provider/resources/{id}/slots
+Owner only (404 otherwise). All slots ending within the last 30 days or later, ordered by `startUtc`. `isBooked` is true when the slot has a Pending or Confirmed booking.
+```json
+[ { "id": "...", "startUtc": "2026-11-01T10:00:00Z", "endUtc": "2026-11-01T11:00:00Z", "priceCents": 2500, "isBooked": false } ]
+```
+
 ### POST /api/provider/resources/{id}/slots
 Request (`endUtc > startUtc`, `priceCents >= 0`):
 ```json
@@ -87,7 +105,7 @@ Request (`endUtc > startUtc`, `priceCents >= 0`):
 ### GET /api/provider/bookings
 200: bookings on the provider's resources, each with the customer name:
 ```json
-[ { "id": 500, "slotId": 100, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
+[ { "id": 500, "slotId": 100, "resourceId": 7, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
     "endUtc": "2026-11-01T11:00:00Z", "status": "Confirmed", "amountCents": 2500, "customerName": "Ann" } ]
 ```
 
@@ -98,7 +116,7 @@ Headers: `Idempotency-Key: 3f1c...`. Request (card token `fail` forces a decline
 ```
 201:
 ```json
-{ "id": 500, "slotId": 100, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
+{ "id": 500, "slotId": 100, "resourceId": 7, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
   "endUtc": "2026-11-01T11:00:00Z", "status": "Confirmed", "amountCents": 2500 }
 ```
 Errors: 400 (missing key/body), 404 (slot not found), 409 (slot taken or already started), 402 (payment failed; booking is `PaymentFailed`, slot released):
@@ -121,28 +139,28 @@ Request `{ "newSlotId": 101 }`. Atomic: the old booking becomes `Cancelled` and 
 export type Role = 'Customer' | 'Provider';
 export type BookingStatus = 'Pending' | 'Confirmed' | 'PaymentFailed' | 'Cancelled';
 
-export interface User { id: number; email: string; name: string; role: Role }
+export interface User { id: string; email: string; name: string; role: Role }
 export interface AuthResponse { token: string; user: User }
 export interface RegisterRequest { email: string; password: string; name: string; role: Role }
 export interface LoginRequest { email: string; password: string }
 
-export interface Resource { id: number; name: string; description: string; providerName?: string }
+export interface Resource { id: string; name: string; description: string; providerName?: string }
 export interface CreateResourceRequest { name: string; description: string }
 
-export interface Slot { id: number; startUtc: string; endUtc: string; priceCents: number }
+export interface Slot { id: string; startUtc: string; endUtc: string; priceCents: number }
 export interface CreateSlotRequest { startUtc: string; endUtc: string; priceCents: number }
 
 export interface Booking {
-  id: number; slotId: number; resourceName: string;
+  id: string; slotId: string; resourceId: string; resourceName: string;
   startUtc: string; endUtc: string; status: BookingStatus; amountCents: number;
   customerName?: string; // provider view only
 }
-export interface CreateBookingRequest { slotId: number; cardToken: string }
-export interface RescheduleRequest { newSlotId: number }
+export interface CreateBookingRequest { slotId: string; cardToken: string }
+export interface RescheduleRequest { newSlotId: string }
 
 export interface ProblemDetails {
   type?: string; title: string; status: number; detail?: string;
   traceId?: string; errors?: Record<string, string[]>;
 }
 ```
-Ids are numeric in this contract; if the backend uses GUIDs, change `number` to `string` here and in PRD §6 together.
+Ids are GUID strings (e.g. "3fa85f64-5717-4562-b3fc-2c963f66afa6"); the JSON examples above show short numbers for brevity only. `GET /api/auth/me` (authenticated) returns the `User` object.
