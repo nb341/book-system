@@ -34,6 +34,22 @@ public sealed class GlobalExceptionHandler(
                     Detail = "The request conflicts with existing data."
                 };
                 break;
+            case DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ExclusionViolation } }:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Conflict",
+                    Detail = "Slot overlaps an existing slot."
+                };
+                break;
+            case DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } }:
+                problem = new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "Conflict",
+                    Detail = "The entity is referenced by other data."
+                };
+                break;
             default:
                 logger.LogError(exception, "Unhandled exception");
                 problem = new ProblemDetails

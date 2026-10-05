@@ -9,7 +9,7 @@ export interface LoginRequest { email: string; password: string }
 export interface Resource { id: string; name: string; description: string; providerName?: string }
 export interface CreateResourceRequest { name: string; description: string }
 
-export interface Slot { id: string; startUtc: string; endUtc: string; priceCents: number }
+export interface Slot { id: string; startUtc: string; endUtc: string; priceCents: number; isBooked?: boolean }
 export interface CreateSlotRequest { startUtc: string; endUtc: string; priceCents: number }
 
 export interface Booking {

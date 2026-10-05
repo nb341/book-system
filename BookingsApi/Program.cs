@@ -20,6 +20,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
         ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.")));
 
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ResourceService>();
 builder.Services.AddSingleton<TokenService>();
 
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>

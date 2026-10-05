@@ -35,6 +35,7 @@ Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants 
 | POST `/api/provider/resources` | Provider | 201 | 400, 401, 403 |
 | GET `/api/provider/resources` | Provider | 200 | 401, 403 |
 | POST `/api/provider/resources/{id}/slots` | Provider (owner) | 201 | 400, 401, 403, 404, 409 (overlap) |
+| GET `/api/provider/resources/{id}/slots` | Provider (owner) | 200 | 401, 403, 404 |
 | DELETE `/api/provider/slots/{id}` | Provider (owner) | 204 | 401, 403, 404, 409 (has bookings) |
 | GET `/api/provider/bookings` | Provider | 200 | 401, 403 |
 | POST `/api/bookings` | Customer | 201 | 400, 401, 402, 403, 404, 409 |
@@ -76,6 +77,12 @@ Request `{ "name": "Court 1", "description": "Indoor tennis court" }` (name requ
 
 ### GET /api/provider/resources
 200: array of the same resource objects (own only).
+
+### GET /api/provider/resources/{id}/slots
+Owner only (404 otherwise). All slots ending within the last 30 days or later, ordered by `startUtc`. `isBooked` is true when the slot has a Pending or Confirmed booking.
+```json
+[ { "id": "...", "startUtc": "2026-11-01T10:00:00Z", "endUtc": "2026-11-01T11:00:00Z", "priceCents": 2500, "isBooked": false } ]
+```
 
 ### POST /api/provider/resources/{id}/slots
 Request (`endUtc > startUtc`, `priceCents >= 0`):

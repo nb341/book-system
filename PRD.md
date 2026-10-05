@@ -61,6 +61,7 @@ All JSON, `Authorization: Bearer <jwt>` except auth. Errors use ProblemDetails (
 | POST `/api/provider/resources` | Provider | `{name,description}` → `201 resource` |
 | GET `/api/provider/resources` | Provider | → own resources |
 | POST `/api/provider/resources/{id}/slots` | Provider | `{startUtc,endUtc,priceCents}` → `201 slot` (409 if overlap) |
+| GET `/api/provider/resources/{id}/slots` | Provider | → own resource slots (future + last 30 days) `[{id,startUtc,endUtc,priceCents,isBooked}]` (404 if not owned) |
 | DELETE `/api/provider/slots/{id}` | Provider | `204` (409 if booked) |
 | GET `/api/provider/bookings` | Provider | → bookings on own resources |
 | POST `/api/bookings` | Customer | header `Idempotency-Key`; `{slotId,cardToken}` → `201 booking` / `409` taken / `402` payment failed |
