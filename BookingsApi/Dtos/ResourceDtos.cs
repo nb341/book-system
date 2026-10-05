@@ -9,6 +9,13 @@ public sealed record CreateResourceRequest
     [MaxLength(2000)] public string? Description { get; init; }
 }
 
+public sealed record UpdateResourceRequest
+{
+    [Required, MaxLength(200)] public string? Name { get; init; }
+
+    [MaxLength(2000)] public string? Description { get; init; }
+}
+
 public sealed record CreateSlotRequest
 {
     [Required] public DateTimeOffset? StartUtc { get; init; }

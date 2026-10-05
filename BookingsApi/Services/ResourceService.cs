@@ -31,6 +31,45 @@ public sealed class ResourceService(AppDbContext db)
         return new ResourceDto(resource.Id, resource.Name, resource.Description);
     }
 
+    public async Task<ResourceDto> UpdateResourceAsync(
+        Guid providerId, Guid resourceId, UpdateResourceRequest request, CancellationToken ct)
+    {
+        var name = request.Name!.Trim();
+        if (name.Length == 0)
+            throw AppException.Validation("name", "Name is required.");
+
+        var resource = await db.Resources
+            .FirstOrDefaultAsync(r => r.Id == resourceId && r.ProviderId == providerId, ct)
+            ?? throw new AppException(StatusCodes.Status404NotFound, "Resource not found");
+        resource.Name = name;
+        resource.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        await db.SaveChangesAsync(ct);
+        return new ResourceDto(resource.Id, resource.Name, resource.Description);
+    }
+
+    /// <summary>Deletes the resource and its slots, unless any slot has booking history (same rule as slot deletion).</summary>
+    public async Task DeleteResourceAsync(Guid providerId, Guid resourceId, CancellationToken ct)
+    {
+        var resource = await db.Resources
+            .FirstOrDefaultAsync(r => r.Id == resourceId && r.ProviderId == providerId, ct)
+            ?? throw new AppException(StatusCodes.Status404NotFound, "Resource not found");
+
+        if (await db.Bookings.AnyAsync(b => b.Slot!.ResourceId == resourceId, ct))
+            throw ResourceHasBookings();
+
+        // One SaveChanges = one transaction; a booking that lands after the check trips the FK instead.
+        db.Slots.RemoveRange(await db.Slots.Where(s => s.ResourceId == resourceId).ToListAsync(ct));
+        db.Resources.Remove(resource);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+        {
+            throw ResourceHasBookings();
+        }
+    }
+
     public Task<List<ResourceDto>> ListOwnResourcesAsync(Guid providerId, CancellationToken ct) =>
         db.Resources.AsNoTracking()
             .Where(r => r.ProviderId == providerId)
@@ -134,4 +173,7 @@ public sealed class ResourceService(AppDbContext db)
 
     private static AppException SlotHasBookings() =>
         new(StatusCodes.Status409Conflict, "Conflict", "Slot has bookings and cannot be deleted.");
+
+    private static AppException ResourceHasBookings() =>
+        new(StatusCodes.Status409Conflict, "Conflict", "Resource has bookings and cannot be deleted.");
 }

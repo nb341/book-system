@@ -12,4 +12,12 @@ public sealed record CreateBookingRequest
 }
 
 public sealed record BookingDto(
-    Guid Id, Guid SlotId, string ResourceName, DateTime StartUtc, DateTime EndUtc, [property: JsonConverter(typeof(JsonStringEnumConverter))] BookingStatus Status, int AmountCents);
+    Guid Id, Guid SlotId, Guid ResourceId, string ResourceName, DateTime StartUtc, DateTime EndUtc, [property: JsonConverter(typeof(JsonStringEnumConverter))] BookingStatus Status, int AmountCents);
+
+public sealed record ProviderBookingDto(
+    Guid Id, Guid SlotId, Guid ResourceId, string ResourceName, DateTime StartUtc, DateTime EndUtc, [property: JsonConverter(typeof(JsonStringEnumConverter))] BookingStatus Status, int AmountCents, string CustomerName);
+
+public sealed record RescheduleBookingRequest
+{
+    [Required] public Guid? NewSlotId { get; init; }
+}

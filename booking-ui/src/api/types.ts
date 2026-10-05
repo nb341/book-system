@@ -15,6 +15,7 @@ export interface CreateSlotRequest { startUtc: string; endUtc: string; priceCent
 export interface Booking {
   id: string
   slotId: string
+  resourceId: string
   resourceName: string
   startUtc: string
   endUtc: string

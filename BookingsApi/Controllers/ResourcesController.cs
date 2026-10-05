@@ -30,6 +30,19 @@ public sealed class ResourcesController(ResourceService resources) : ControllerB
         await resources.ListOwnResourcesAsync(User.GetUserId(), ct);
 
     [Authorize(Roles = "Provider")]
+    [HttpPut("api/provider/resources/{id:guid}")]
+    public async Task<ActionResult<ResourceDto>> Update(Guid id, UpdateResourceRequest request, CancellationToken ct) =>
+        await resources.UpdateResourceAsync(User.GetUserId(), id, request, ct);
+
+    [Authorize(Roles = "Provider")]
+    [HttpDelete("api/provider/resources/{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await resources.DeleteResourceAsync(User.GetUserId(), id, ct);
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Provider")]
     [HttpGet("api/provider/resources/{id:guid}/slots")]
     public async Task<ActionResult<List<ProviderSlotDto>>> ListOwnSlots(Guid id, CancellationToken ct) =>
         await resources.ListOwnSlotsAsync(User.GetUserId(), id, ct);

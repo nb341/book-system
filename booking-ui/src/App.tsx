@@ -6,7 +6,7 @@ import { useAuth } from './auth/useAuth.ts'
 import { Layout } from './components/Layout.tsx'
 import { Login } from './pages/Login.tsx'
 import { MyBookings } from './pages/MyBookings.tsx'
-import { Placeholder } from './pages/Placeholder.tsx'
+import { ProviderBookings } from './pages/ProviderBookings.tsx'
 import { ProviderResources } from './pages/ProviderResources.tsx'
 import { ProviderResourceSlots } from './pages/ProviderResourceSlots.tsx'
 import { Register } from './pages/Register.tsx'
@@ -35,7 +35,7 @@ export default function App() {
             <Route element={<RequireRole role="Provider" />}>
               <Route path="/provider/resources" element={<ProviderResources />} />
               <Route path="/provider/resources/:id" element={<ProviderResourceSlots />} />
-              <Route path="/provider/bookings" element={<Placeholder title="Bookings" />} />
+              <Route path="/provider/bookings" element={<ProviderBookings />} />
             </Route>
           </Route>
           <Route path="*" element={<HomeRedirect />} />

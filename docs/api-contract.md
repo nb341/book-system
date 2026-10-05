@@ -34,6 +34,8 @@ Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants 
 | GET `/api/resources/{id}/slots?from&to` | any authenticated | 200 | 400, 401, 404 |
 | POST `/api/provider/resources` | Provider | 201 | 400, 401, 403 |
 | GET `/api/provider/resources` | Provider | 200 | 401, 403 |
+| PUT `/api/provider/resources/{id}` | Provider (owner) | 200 | 400, 401, 403, 404 |
+| DELETE `/api/provider/resources/{id}` | Provider (owner) | 204 | 401, 403, 404, 409 (has bookings) |
 | POST `/api/provider/resources/{id}/slots` | Provider (owner) | 201 | 400, 401, 403, 404, 409 (overlap) |
 | GET `/api/provider/resources/{id}/slots` | Provider (owner) | 200 | 401, 403, 404 |
 | DELETE `/api/provider/slots/{id}` | Provider (owner) | 204 | 401, 403, 404, 409 (has bookings) |
@@ -78,6 +80,12 @@ Request `{ "name": "Court 1", "description": "Indoor tennis court" }` (name requ
 ### GET /api/provider/resources
 200: array of the same resource objects (own only).
 
+### PUT /api/provider/resources/{id}
+Owner only (404 otherwise). Same request body and rules as create. 200: the updated resource object.
+
+### DELETE /api/provider/resources/{id}
+Owner only (404 otherwise). 204 no body; the resource's slots are deleted with it. 409 if any of its slots has a booking (active or historical).
+
 ### GET /api/provider/resources/{id}/slots
 Owner only (404 otherwise). All slots ending within the last 30 days or later, ordered by `startUtc`. `isBooked` is true when the slot has a Pending or Confirmed booking.
 ```json
@@ -97,7 +105,7 @@ Request (`endUtc > startUtc`, `priceCents >= 0`):
 ### GET /api/provider/bookings
 200: bookings on the provider's resources, each with the customer name:
 ```json
-[ { "id": 500, "slotId": 100, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
+[ { "id": 500, "slotId": 100, "resourceId": 7, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
     "endUtc": "2026-11-01T11:00:00Z", "status": "Confirmed", "amountCents": 2500, "customerName": "Ann" } ]
 ```
 
@@ -108,7 +116,7 @@ Headers: `Idempotency-Key: 3f1c...`. Request (card token `fail` forces a decline
 ```
 201:
 ```json
-{ "id": 500, "slotId": 100, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
+{ "id": 500, "slotId": 100, "resourceId": 7, "resourceName": "Court 1", "startUtc": "2026-11-01T10:00:00Z",
   "endUtc": "2026-11-01T11:00:00Z", "status": "Confirmed", "amountCents": 2500 }
 ```
 Errors: 400 (missing key/body), 404 (slot not found), 409 (slot taken or already started), 402 (payment failed; booking is `PaymentFailed`, slot released):
@@ -143,7 +151,7 @@ export interface Slot { id: string; startUtc: string; endUtc: string; priceCents
 export interface CreateSlotRequest { startUtc: string; endUtc: string; priceCents: number }
 
 export interface Booking {
-  id: string; slotId: string; resourceName: string;
+  id: string; slotId: string; resourceId: string; resourceName: string;
   startUtc: string; endUtc: string; status: BookingStatus; amountCents: number;
   customerName?: string; // provider view only
 }

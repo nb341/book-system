@@ -29,4 +29,22 @@ public sealed class BookingsController(BookingService bookings) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<BookingDto>>> List(CancellationToken ct) =>
         await bookings.ListOwnAsync(User.GetUserId(), ct);
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<ActionResult<BookingDto>> Cancel(Guid id, CancellationToken ct) =>
+        await bookings.CancelAsync(User.GetUserId(), id, ct);
+
+    [HttpPost("{id:guid}/reschedule")]
+    public async Task<ActionResult<BookingDto>> Reschedule(Guid id, RescheduleBookingRequest request, CancellationToken ct) =>
+        await bookings.RescheduleAsync(User.GetUserId(), id, request, ct);
+}
+
+[ApiController]
+[Authorize(Roles = "Provider")]
+[Route("api/provider/bookings")]
+public sealed class ProviderBookingsController(BookingService bookings) : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<List<ProviderBookingDto>>> List(CancellationToken ct) =>
+        await bookings.ListForProviderAsync(User.GetUserId(), ct);
 }

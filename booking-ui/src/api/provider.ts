@@ -1,5 +1,5 @@
 import { request } from './client.ts'
-import type { CreateResourceRequest, CreateSlotRequest, Resource, Slot } from './types.ts'
+import type { Booking, CreateResourceRequest, CreateSlotRequest, Resource, Slot } from './types.ts'
 
 export function listMyResources(signal?: AbortSignal): Promise<Resource[]> {
   return request<Resource[]>('/api/provider/resources', { signal })
@@ -19,4 +19,8 @@ export function createSlot(resourceId: string, body: CreateSlotRequest): Promise
 
 export function deleteSlot(slotId: string): Promise<void> {
   return request<void>(`/api/provider/slots/${encodeURIComponent(slotId)}`, { method: 'DELETE' })
+}
+
+export function listProviderBookings(signal?: AbortSignal): Promise<Booking[]> {
+  return request<Booking[]>('/api/provider/bookings', { signal })
 }

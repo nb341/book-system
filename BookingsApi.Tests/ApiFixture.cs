@@ -12,7 +12,7 @@ namespace BookingsApi.Tests;
 
 public sealed record TestUser(Guid Id, string Token);
 
-public sealed record BookingResponse(Guid Id, Guid SlotId, string ResourceName, DateTime StartUtc, DateTime EndUtc, string Status, int AmountCents);
+public sealed record BookingResponse(Guid Id, Guid SlotId, Guid ResourceId, string ResourceName, DateTime StartUtc, DateTime EndUtc, string Status, int AmountCents);
 
 /// <summary>Creates a throwaway Postgres database (migrated by the API on startup) and drops it on dispose.</summary>
 public sealed class ApiFixture : IAsyncLifetime
@@ -83,6 +83,56 @@ public sealed class ApiFixture : IAsyncLifetime
             new { startUtc = start, endUtc = start.AddHours(1), priceCents });
         s.EnsureSuccessStatusCode();
         return (await s.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Creates a fresh resource owned by <paramref name="provider"/> with <paramref name="count"/> future slots.</summary>
+    public async Task<(Guid ResourceId, List<Guid> SlotIds)> CreateResourceWithSlotsAsync(TestUser provider, int count)
+    {
+        using var c = CreateClient(provider.Token);
+        var r = await c.PostAsJsonAsync("/api/provider/resources",
+            new { name = "Court " + Guid.NewGuid().ToString("N")[..6], description = "test" });
+        r.EnsureSuccessStatusCode();
+        var resourceId = (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var ids = new List<Guid>();
+        for (var i = 0; i < count; i++)
+        {
+            var start = DateTime.UtcNow.AddDays(30 + i).Date.AddHours(10);
+            var s = await c.PostAsJsonAsync($"/api/provider/resources/{resourceId}/slots",
+                new { startUtc = start, endUtc = start.AddHours(1), priceCents = 2500 });
+            s.EnsureSuccessStatusCode();
+            ids.Add((await s.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid());
+        }
+        return (resourceId, ids);
+    }
+
+    /// <summary>Inserts a Confirmed booking on a slot that already started.</summary>
+    public async Task<Guid> CreatePastConfirmedBookingAsync(TestUser customer)
+    {
+        var slotId = await CreatePastSlotAsync();
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var booking = new Booking
+        {
+            Id = Guid.NewGuid(), SlotId = slotId, CustomerId = customer.Id, Status = BookingStatus.Confirmed,
+            AmountCents = 1000, PaymentRef = "mock_x", IdempotencyKey = Guid.NewGuid().ToString("N"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        db.Bookings.Add(booking);
+        await db.SaveChangesAsync();
+        return booking.Id;
+    }
+
+    public async Task<HttpResponseMessage> PostAsync(TestUser user, string url, object? body = null)
+    {
+        using var c = CreateClient(user.Token);
+        return await c.PostAsJsonAsync(url, body ?? new { });
+    }
+
+    public async Task<BookingResponse> BookOkAsync(TestUser user, Guid slotId)
+    {
+        using var res = await BookAsync(user, slotId, Guid.NewGuid().ToString("N"));
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<BookingResponse>(Json))!;
     }
 
     /// <summary>Inserts a slot that already started (cannot be created through the API).</summary>
