@@ -1,5 +1,7 @@
 # API Contract
 
+> Ids are GUIDs, serialized as JSON strings (e.g. `"27a671d9-ecc7-45ff-871b-c0b1fb603260"`). Numeric ids in the examples below are illustrative only; in TypeScript use `string`.
+
 Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants are ISO-8601 UTC strings (`2026-11-01T10:00:00Z`). Money is integer cents.
 
 ## Conventions
@@ -27,6 +29,7 @@ Derived from `PRD.md` §7 (PRD wins on conflict). JSON everywhere. All instants 
 |---|---|---|---|
 | POST `/api/auth/register` | public | 201 | 400, 409 (email exists) |
 | POST `/api/auth/login` | public | 200 | 400, 401 |
+| GET `/api/auth/me` | any authenticated | 200 `{id,email,name,role}` (read from the token; use to validate a stored token) | 401 |
 | GET `/api/resources` | any authenticated | 200 | 401 |
 | GET `/api/resources/{id}/slots?from&to` | any authenticated | 200 | 400, 401, 404 |
 | POST `/api/provider/resources` | Provider | 201 | 400, 401, 403 |
@@ -121,28 +124,28 @@ Request `{ "newSlotId": 101 }`. Atomic: the old booking becomes `Cancelled` and 
 export type Role = 'Customer' | 'Provider';
 export type BookingStatus = 'Pending' | 'Confirmed' | 'PaymentFailed' | 'Cancelled';
 
-export interface User { id: number; email: string; name: string; role: Role }
+export interface User { id: string; email: string; name: string; role: Role }
 export interface AuthResponse { token: string; user: User }
 export interface RegisterRequest { email: string; password: string; name: string; role: Role }
 export interface LoginRequest { email: string; password: string }
 
-export interface Resource { id: number; name: string; description: string; providerName?: string }
+export interface Resource { id: string; name: string; description: string; providerName?: string }
 export interface CreateResourceRequest { name: string; description: string }
 
-export interface Slot { id: number; startUtc: string; endUtc: string; priceCents: number }
+export interface Slot { id: string; startUtc: string; endUtc: string; priceCents: number }
 export interface CreateSlotRequest { startUtc: string; endUtc: string; priceCents: number }
 
 export interface Booking {
-  id: number; slotId: number; resourceName: string;
+  id: string; slotId: string; resourceName: string;
   startUtc: string; endUtc: string; status: BookingStatus; amountCents: number;
   customerName?: string; // provider view only
 }
-export interface CreateBookingRequest { slotId: number; cardToken: string }
-export interface RescheduleRequest { newSlotId: number }
+export interface CreateBookingRequest { slotId: string; cardToken: string }
+export interface RescheduleRequest { newSlotId: string }
 
 export interface ProblemDetails {
   type?: string; title: string; status: number; detail?: string;
   traceId?: string; errors?: Record<string, string[]>;
 }
 ```
-Ids are numeric in this contract; if the backend uses GUIDs, change `number` to `string` here and in PRD §6 together.
+Ids are GUID strings (e.g. "3fa85f64-5717-4562-b3fc-2c963f66afa6"); the JSON examples above show short numbers for brevity only. `GET /api/auth/me` (authenticated) returns the `User` object.

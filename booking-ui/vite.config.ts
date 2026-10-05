@@ -8,4 +8,10 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    proxy: {
+      // In docker, nginx proxies /api; in dev, Vite does.
+      '/api': 'http://localhost:5129',
+    },
+  },
 })
